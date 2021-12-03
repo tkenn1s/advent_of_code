@@ -1,0 +1,56 @@
+#!/bin/bash
+
+INPUT=$1
+if [ -z "${INPUT}" ]; then
+  INPUT=aoc.input
+fi
+
+function getList() {
+  local list=$1
+  local position=$2
+  local use_msb=$3
+  local binary
+  local total=0
+  local out_list=()
+  for binary in ${list}; do
+    local digit=$( eval echo \${binary:$position:1} )
+    if [ ${digit} -eq 1 ]; then
+      (( total++ ))
+      out_list[1]="${out_list[1]} ${binary}"
+    else
+      (( total-- ))
+      out_list[0]="${out_list[0]} ${binary}"
+    fi
+  done
+  if [ ${use_msb} -eq 1 -a ${total} -ge 0 ] || [ ${use_msb} -eq 0 -a ${total} -lt 0 ]; then
+      echo ${out_list[1]}
+  else
+      echo ${out_list[0]}
+  fi
+}
+
+oxygen_list=""
+co2_list=""
+while read binary; do
+  oxygen_list="${oxygen_list} ${binary}"
+  co2_list="${co2_list} ${binary}"
+done < "${INPUT}"
+
+cnt=0
+while $( true ); do
+  stop=true
+  if [ $( awk -F" " '{print NF-1}' <<< "${oxygen_list}" ) -gt 0 ]; then
+    oxygen_list=$( getList "${oxygen_list}" ${cnt} 1 )
+    stop=false
+  fi
+  if [ $( awk -F" " '{print NF-1}' <<< "${co2_list}" ) -gt 0 ]; then
+    co2_list=$( getList "${co2_list}" ${cnt} 0 )
+    stop=false
+  fi
+  if [ ${stop} = "true" ]; then
+    break;
+  fi
+  (( cnt++ ))
+done
+
+echo "$( echo "obase=10;ibase=2;${oxygen_list}" | bc ) * $( echo "obase=10;ibase=2;${co2_list}" | bc )" | bc

@@ -1,0 +1,28 @@
+#!/bin/bash
+
+WINDOW=$1
+INPUT=$2
+if [ -z "${INPUT}" ]; then
+  INPUT=aoc.input
+fi
+
+function getWindowSum() {
+  local line_num=$1
+  tail -n +${line_num} "${INPUT}" | head -n ${WINDOW} | paste -sd+ | bc -l
+}
+
+num_values=$( wc -l "${INPUT}" | cut -d' ' -f1 )
+(( max_count = num_values - WINDOW + 1 ))
+val1=$( getWindowSum 1 )
+val2=$( getWindowSum 2 )
+count=2
+increase=0
+while (( count <= max_count )); do
+  if (( val1 < val2 )); then
+    (( increase++ ))
+  fi
+  (( count++ ))
+  val1=${val2}
+  val2=$( getWindowSum ${count} )
+done
+echo ${increase}

@@ -1,0 +1,28 @@
+#!/bin/bash
+
+INPUT=$1
+if [ -z "${INPUT}" ]; then
+  INPUT=aoc.input
+fi
+
+position=0
+depth=0
+aim=0
+while read line; do
+  cmd=$( echo ${line} | cut -d ' ' -f 1 )
+  amount=$( echo ${line} | cut -d ' ' -f 2 )
+  case ${cmd} in
+    forward)
+      (( position += amount ))
+      (( depth += (aim * amount) ))
+      ;;
+    down)
+      (( aim += amount ))
+      ;;
+    up)
+      (( aim -= amount ))
+      ;;
+  esac
+done < "${INPUT}"
+echo $(( position * depth ))
+

@@ -1,0 +1,35 @@
+#!/bin/bash
+
+INPUT=$1
+if [ -z "${INPUT}" ]; then
+  INPUT=aoc.input
+fi
+
+typeset -A total
+while read binary; do
+  cnt=0
+  while (( cnt < ${#binary} )); do
+    digit=$( eval echo \${binary:$cnt:1} )
+    if [ ${digit} -eq 1 ]; then
+      (( total[${cnt}] = ${total[${cnt}]:-0} + 1 ))
+    else
+      (( total[${cnt}] = ${total[${cnt}]:-0} - 1 ))
+    fi
+    (( cnt++ ))
+  done
+done < "${INPUT}"
+
+gamma=""
+epsilon=""
+cnt=0
+while (( cnt < ${#total[@]} )); do
+  if [ ${total[$cnt]} -gt 0 ]; then
+    gamma=${gamma}1
+    epsilon=${epsilon}0
+  else
+    gamma=${gamma}0
+    epsilon=${epsilon}1
+  fi
+  (( cnt++ ))
+done
+echo "$( echo "obase=10;ibase=2;${gamma}" | bc ) * $( echo "obase=10;ibase=2;${epsilon}" | bc )" | bc
