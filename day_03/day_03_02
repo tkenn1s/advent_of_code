@@ -13,7 +13,7 @@ function getList() {
   local total=0
   local out_list=()
   for binary in ${list}; do
-    local digit=$( eval echo \${binary:$position:1} )
+    local digit=${binary:$position:1}
     if [ ${digit} -eq 1 ]; then
       (( total++ ))
       out_list[1]="${out_list[1]} ${binary}"

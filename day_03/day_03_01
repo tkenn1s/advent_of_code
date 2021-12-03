@@ -6,30 +6,30 @@ if [ -z "${INPUT}" ]; then
 fi
 
 typeset -A total
-while read binary; do
+while read entry; do
   cnt=0
-  while (( cnt < ${#binary} )); do
-    digit=$( eval echo \${binary:$cnt:1} )
+  while (( cnt < ${#entry} )); do
+    digit=${entry:${cnt}:1}
     if [ ${digit} -eq 1 ]; then
-      (( total[${cnt}] = ${total[${cnt}]:-0} + 1 ))
+      (( total[${cnt}]++ ))
     else
-      (( total[${cnt}] = ${total[${cnt}]:-0} - 1 ))
+      (( total[${cnt}]-- ))
     fi
     (( cnt++ ))
   done
 done < "${INPUT}"
 
-gamma=""
-epsilon=""
+gamma=0
+epsilon=0
 cnt=0
 while (( cnt < ${#total[@]} )); do
+  (( gamma = gamma<<1 ))
+  (( epsilon = epsilon<<1 ))
   if [ ${total[$cnt]} -gt 0 ]; then
-    gamma=${gamma}1
-    epsilon=${epsilon}0
+     (( gamma++ ))
   else
-    gamma=${gamma}0
-    epsilon=${epsilon}1
+     (( epsilon++ ))
   fi
   (( cnt++ ))
 done
-echo "$( echo "obase=10;ibase=2;${gamma}" | bc ) * $( echo "obase=10;ibase=2;${epsilon}" | bc )" | bc
+echo "${gamma} * ${epsilon}" | bc
