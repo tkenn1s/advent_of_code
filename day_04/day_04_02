@@ -1,0 +1,171 @@
+#!/bin/bash
+
+INPUT=$1
+if [ -z "${INPUT}" ]; then
+  INPUT=aoc.input
+fi
+
+declare -a WINNING_BOARD
+declare -a BOARD_REMOVED
+
+SPIN=0
+function spin() {
+  local spinner="/-\|"
+  echo -en "\033[$1D"
+  printf "%s" "${spinner:${SPIN}:1}"
+  (( SPIN = (SPIN + 1) % ${#spinner} ))
+}
+
+function markNumber() {
+  local num=${1}
+  local board
+  for (( board=0; board < ${NUM_BOARDS}; board++ )); do
+    if [ 1 -eq ${WINNING_BOARD[${board}]-0} ]; then
+      continue
+    fi
+    local row
+    for (( row=0; row < 5; row++ )); do
+      local col
+      for (( col=0; col < 5; col++ )); do
+        eval local element=\${BOARD_${board}_${row}[${col}]}
+        if [ "xx" = "${element}" ]; then
+          continue
+        fi
+        if [ ${element} -eq ${num} ]; then
+          eval BOARD_${board}_${row}[${col}]=\"xx\"
+        fi
+      done
+    done
+  done
+}
+
+function removeWinningBoard() {
+  local board
+  local idx=0
+  BOARD_REMOVED=()
+  for (( board=0; board < ${NUM_BOARDS}; board++ )); do
+    if [ 1 -eq ${WINNING_BOARD[${board}]-0} ]; then
+      continue
+    fi
+    local row
+    for (( row=0; row < 5; row++ )); do
+      eval local columns=\${BOARD_${board}_${row}[@]}
+      if [ "xx xx xx xx xx" = "${columns}" ]; then
+        WINNING_BOARD[${board}]=1
+        BOARD_REMOVED[${idx}]=${board}
+        (( idx++ ))
+      fi
+    done
+    local col
+    for (( col=0; col < 5; col++ )); do
+      local is_winner=1
+      local row
+      for (( row=0; row < 5; row++ )); do
+        eval local element=\${BOARD_${board}_${row}[${col}]}
+        if [ "xx" != "${element}" ]; then
+          is_winner=0
+          break
+        fi
+      done
+      if [ ${is_winner} -eq 1 ]; then
+        WINNING_BOARD[${board}]=1
+        BOARD_REMOVED[${idx}]=${board}
+        (( idx++ ))
+      fi
+    done
+  done
+  return ${#BOARD_REMOVED}
+}
+
+function sumBoard() {
+  local board=${1}
+  local sum=0
+  local row
+  for (( row=0; row < 5; row++ )); do
+    local col
+    for (( col=0; col < 5; col++ )); do
+      eval local element=\${BOARD_${board}_${row}[${col}]}
+      if [ "xx" != "${element}" ]; then
+        (( sum += element ))
+      fi
+    done
+  done
+  echo ${sum}
+}
+
+function availableBoards() {
+  local available=0
+  local board
+  for (( board=0; board < ${NUM_BOARDS}; board++ )); do
+    if [ 1 -eq ${WINNING_BOARD[${board}]-0} ]; then
+      continue
+    fi
+    (( available++ ))
+  done
+  echo ${available}
+}
+
+function printBoards() {
+  local active_only=${1-0}
+  local board
+  for (( board=0; board < ${NUM_BOARDS}; board++ )); do
+    if [ 1 -eq ${active_only} -a 1 -eq ${WINNING_BOARD[${board}]-0} ]; then
+      continue
+    fi
+    printf "board %d\n" ${board}
+    local row
+    for (( row=0; row < 5; row++ )); do
+      local var=BOARD_${board}_${row}
+      eval local elements=\( \${${var}[@]} \)
+      local col
+      for (( col=0; col < 5; col++ )); do
+        local element=${elements[${col}]}
+        if [ "xx" = "${element}" ]; then
+          printf "xx "
+        else
+          eval printf \"%2d \" \${BOARD_${board}_${row}[${col}]}
+        fi
+      done
+      printf "\n"
+    done
+    printf "\n"
+  done
+}
+
+BoardIdx=-1
+row=0
+bingo=""
+while read line
+do
+  if [ "$line" = "" ]; then
+    (( BoardIdx++ ))
+    row=0
+  else
+    if [ ${BoardIdx} -eq -1 ]; then
+      bingo=${line}
+      continue
+    fi
+    col=0
+    for element in ${line}; do
+      eval BOARD_${BoardIdx}_${row}[${col}]=${element}
+      (( col++ ))
+    done
+    (( row++ ))
+  fi
+done < "${INPUT}"
+
+(( NUM_BOARDS=${BoardIdx} + 1 ))
+
+IFS=, read -ra numbers <<< ${bingo}
+for draw in ${numbers[@]}; do
+  spin
+  markNumber ${draw}
+  removeWinningBoard
+  boardRemoved=$?
+  available=$( availableBoards )
+  if [ ${boardRemoved} -gt 0 -a 0 -eq ${available} ]; then
+    echo
+    echo "$( sumBoard ${BOARD_REMOVED[0]} ) * ${draw}" | bc
+    break;
+  fi
+done

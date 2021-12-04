@@ -1,0 +1,117 @@
+#!/bin/bash
+
+INPUT=$1
+if [ -z "${INPUT}" ]; then
+  INPUT=aoc.input
+fi
+
+SPIN=0
+function spin() {
+  local spinner="/-\|"
+  echo -en "\033[$1D"
+  printf "%s" "${spinner:${SPIN}:1}"
+  (( SPIN = (SPIN + 1) % ${#spinner} ))
+}
+
+function markNumber() {
+  local num=${1}
+  local board
+  for (( board=0; board < ${NUM_BOARDS}; board++ )); do
+    local row
+    for (( row=0; row < 5; row++ )); do
+      local col
+      for (( col=0; col < 5; col++ )); do
+        eval local element=\${BOARD_${board}_${row}[${col}]}
+        if [ "xx" = "${element}" ]; then
+          continue
+        fi
+        if [ ${element} -eq ${num} ]; then
+          eval BOARD_${board}_${row}[${col}]=\"xx\"
+        fi
+      done
+    done
+  done
+}
+
+function isWinner() {
+  local board
+  for (( board=0; board < ${NUM_BOARDS}; board++ )); do
+    local row
+    for (( row=0; row < 5; row++ )); do
+      eval local columns=\${BOARD_${board}_${row}[@]}
+      if [ "xx xx xx xx xx" = "${columns}" ]; then
+        echo ${board}
+        return
+      fi
+    done
+    local col
+    for (( col=0; col < 5; col++ )); do
+      local is_winner=1
+      local row
+      for (( row=0; row < 5; row++ )); do
+        eval local element=\${BOARD_${board}_${row}[${col}]}
+        if [ "xx" != "${element}" ]; then
+          is_winner=0
+          break
+        fi
+      done
+      if [ ${is_winner} -eq 1 ]; then
+        echo ${board}
+        return
+      fi
+    done
+  done
+  echo -1
+}
+
+function sumBoard() {
+  local board=${1}
+  local sum=0
+  local row
+  for (( row=0; row < 5; row++ )); do
+    local col
+    for (( col=0; col < 5; col++ )); do
+      eval local element=\${BOARD_${board}_${row}[${col}]}
+      if [ "xx" != "${element}" ]; then
+        (( sum += element ))
+      fi
+    done
+  done
+  echo ${sum}
+}
+
+BoardIdx=-1
+row=0
+bingo=""
+while read line
+do
+  if [ "$line" = "" ]; then
+    (( BoardIdx++ ))
+    row=0
+  else
+    if [ ${BoardIdx} -eq -1 ]; then
+      bingo=${line}
+      continue
+    fi
+    col=0
+    for element in ${line}; do
+      eval BOARD_${BoardIdx}_${row}[${col}]=${element}
+      (( col++ ))
+    done
+    (( row++ ))
+  fi
+done < "${INPUT}"
+
+(( NUM_BOARDS=${BoardIdx} + 1 ))
+
+IFS=, read -ra numbers <<< ${bingo}
+for draw in ${numbers[@]}; do
+  spin
+  markNumber ${draw}
+  winningBoard=$( isWinner )
+  if [ ${winningBoard} -ge 0 ]; then
+    echo
+    echo "$( sumBoard ${winningBoard} ) * ${draw}" | bc
+    break;
+  fi
+done
