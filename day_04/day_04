@@ -1,9 +1,13 @@
 #!/bin/bash
 
-INPUT=$1
+USE_LAST=$1
+INPUT=$2
 if [ -z "${INPUT}" ]; then
   INPUT=aoc.input
 fi
+
+declare -a WINNING_BOARD
+declare -a BOARDS_REMOVED
 
 SPIN=0
 function spin() {
@@ -17,6 +21,9 @@ function markNumber() {
   local num=${1}
   local board
   for (( board=0; board < ${NUM_BOARDS}; board++ )); do
+    if [ 1 -eq ${WINNING_BOARD[${board}]-0} ]; then
+      continue
+    fi
     local row
     for (( row=0; row < 5; row++ )); do
       local col
@@ -33,15 +40,21 @@ function markNumber() {
   done
 }
 
-function isWinner() {
+function removeWinningBoard() {
   local board
+  local idx=0
+  BOARDS_REMOVED=()
   for (( board=0; board < ${NUM_BOARDS}; board++ )); do
+    if [ 1 -eq ${WINNING_BOARD[${board}]-0} ]; then
+      continue
+    fi
     local row
     for (( row=0; row < 5; row++ )); do
       eval local columns=\${BOARD_${board}_${row}[@]}
       if [ "xx xx xx xx xx" = "${columns}" ]; then
-        echo ${board}
-        return
+        WINNING_BOARD[${board}]=1
+        BOARDS_REMOVED[${idx}]=${board}
+        (( idx++ ))
       fi
     done
     local col
@@ -56,12 +69,13 @@ function isWinner() {
         fi
       done
       if [ ${is_winner} -eq 1 ]; then
-        echo ${board}
-        return
+        WINNING_BOARD[${board}]=1
+        BOARDS_REMOVED[${idx}]=${board}
+        (( idx++ ))
       fi
     done
   done
-  echo -1
+  return ${#BOARDS_REMOVED}
 }
 
 function sumBoard() {
@@ -78,6 +92,18 @@ function sumBoard() {
     done
   done
   echo ${sum}
+}
+
+function availableBoards() {
+  local available=0
+  local board
+  for (( board=0; board < ${NUM_BOARDS}; board++ )); do
+    if [ 1 -eq ${WINNING_BOARD[${board}]-0} ]; then
+      continue
+    fi
+    (( available++ ))
+  done
+  echo ${available}
 }
 
 BoardIdx=-1
@@ -108,10 +134,14 @@ IFS=, read -ra numbers <<< ${bingo}
 for draw in ${numbers[@]}; do
   spin
   markNumber ${draw}
-  winningBoard=$( isWinner )
-  if [ ${winningBoard} -ge 0 ]; then
-    echo
-    echo "$( sumBoard ${winningBoard} ) * ${draw}" | bc
-    break;
+  removeWinningBoard
+  boardRemoved=$?
+  if [ ${boardRemoved} -gt 0 ]; then
+    available=$( availableBoards )
+    if [ ${USE_LAST} -eq 0 -o ${available} -eq 0 ]; then
+      echo
+      echo "$( sumBoard ${BOARDS_REMOVED[0]} ) * ${draw}" | bc
+      break;
+    fi
   fi
 done
