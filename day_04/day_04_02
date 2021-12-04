@@ -6,7 +6,7 @@ if [ -z "${INPUT}" ]; then
 fi
 
 declare -a WINNING_BOARD
-declare -a BOARD_REMOVED
+declare -a BOARDS_REMOVED
 
 SPIN=0
 function spin() {
@@ -42,7 +42,7 @@ function markNumber() {
 function removeWinningBoard() {
   local board
   local idx=0
-  BOARD_REMOVED=()
+  BOARDS_REMOVED=()
   for (( board=0; board < ${NUM_BOARDS}; board++ )); do
     if [ 1 -eq ${WINNING_BOARD[${board}]-0} ]; then
       continue
@@ -52,7 +52,7 @@ function removeWinningBoard() {
       eval local columns=\${BOARD_${board}_${row}[@]}
       if [ "xx xx xx xx xx" = "${columns}" ]; then
         WINNING_BOARD[${board}]=1
-        BOARD_REMOVED[${idx}]=${board}
+        BOARDS_REMOVED[${idx}]=${board}
         (( idx++ ))
       fi
     done
@@ -69,12 +69,12 @@ function removeWinningBoard() {
       done
       if [ ${is_winner} -eq 1 ]; then
         WINNING_BOARD[${board}]=1
-        BOARD_REMOVED[${idx}]=${board}
+        BOARDS_REMOVED[${idx}]=${board}
         (( idx++ ))
       fi
     done
   done
-  return ${#BOARD_REMOVED}
+  return ${#BOARDS_REMOVED}
 }
 
 function sumBoard() {
@@ -103,33 +103,6 @@ function availableBoards() {
     (( available++ ))
   done
   echo ${available}
-}
-
-function printBoards() {
-  local active_only=${1-0}
-  local board
-  for (( board=0; board < ${NUM_BOARDS}; board++ )); do
-    if [ 1 -eq ${active_only} -a 1 -eq ${WINNING_BOARD[${board}]-0} ]; then
-      continue
-    fi
-    printf "board %d\n" ${board}
-    local row
-    for (( row=0; row < 5; row++ )); do
-      local var=BOARD_${board}_${row}
-      eval local elements=\( \${${var}[@]} \)
-      local col
-      for (( col=0; col < 5; col++ )); do
-        local element=${elements[${col}]}
-        if [ "xx" = "${element}" ]; then
-          printf "xx "
-        else
-          eval printf \"%2d \" \${BOARD_${board}_${row}[${col}]}
-        fi
-      done
-      printf "\n"
-    done
-    printf "\n"
-  done
 }
 
 BoardIdx=-1
@@ -165,7 +138,7 @@ for draw in ${numbers[@]}; do
   available=$( availableBoards )
   if [ ${boardRemoved} -gt 0 -a 0 -eq ${available} ]; then
     echo
-    echo "$( sumBoard ${BOARD_REMOVED[0]} ) * ${draw}" | bc
+    echo "$( sumBoard ${BOARDS_REMOVED[0]} ) * ${draw}" | bc
     break;
   fi
 done
