@@ -1,0 +1,90 @@
+#!/bin/bash
+
+DIAGONALS=$1
+INPUT=$2
+if [ -z "${INPUT}" ]; then
+  INPUT=aoc.input
+fi
+
+declare -A GRID
+
+SPIN=0
+function spin() {
+  local spinner="/-\|"
+  echo -en "\033[D"
+  printf "%s" "${spinner:${SPIN}:1}"
+  (( SPIN = (SPIN + 1) % ${#spinner} ))
+}
+
+function isStraightLine() {
+  local start=$1
+  local end=$2
+  local x1=${start%,*}
+  local x2=${end%,*}
+  local y1=${start#*,}
+  local y2=${end#*,}
+  if [ ${x1} -eq ${x2} -o ${y1} -eq ${y2} ]; then
+    return 1
+  fi
+  return 0
+}
+
+function drawLine() {
+  local start=$1
+  local end=$2
+  local x1=${start%,*}
+  local x2=${end%,*}
+  local y1=${start#*,}
+  local y2=${end#*,}
+  local distance=0
+  local x_delta=0
+  local y_delta=0
+  if [ ${x1} -gt ${x2} ]; then
+    x_delta=-1
+    (( distance = x1 - x2 + 1 ))
+  elif [ ${x2} -gt ${x1} ]; then
+    x_delta=1
+    (( distance = x2 - x1 + 1 ))
+  fi
+  if [ ${y1} -gt ${y2} ]; then
+    y_delta=-1
+    (( distance = y1 - y2 + 1 ))
+  elif [ ${y2} -gt ${y1} ]; then
+    y_delta=1
+    (( distance = y2 - y1 + 1 ))
+  fi
+  local i
+  for (( i = 0; i < ${distance}; i++ )); do
+    (( GRID[${x1},${y1}] = ${GRID[${x1},${y1}]:-0} + 1 ))
+    (( x1 += x_delta ))
+    (( y1 += y_delta ))
+  done
+}
+
+function countIntersections() {
+  local count=0
+  local element
+  for element in ${GRID[@]}; do
+    if [ ${element} -gt 1 ]; then
+      (( count++ ))
+    fi
+  done
+  echo ${count}
+}
+
+while read line
+do
+  spin
+  start=${line% -> *}
+  end=${line#* -> }
+  if [ ${DIAGONALS} -eq 0 ]; then
+    isStraightLine ${start} ${end}
+    if [ $? -eq 0 ]; then
+      continue
+    fi
+  fi
+  drawLine ${start} ${end}
+done < "${INPUT}"
+
+echo -e "\033[1D$( countIntersections )"
+
