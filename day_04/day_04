@@ -1,10 +1,7 @@
 #!/bin/bash
 
-USE_LAST=$1
-INPUT=$2
-if [ -z "${INPUT}" ]; then
-  INPUT=aoc.input
-fi
+USE_LAST=${1-0}
+INPUT=${2-aoc.input}
 
 declare -a WINNING_BOARD
 declare -a BOARDS_REMOVED
