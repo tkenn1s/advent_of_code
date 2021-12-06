@@ -36,9 +36,6 @@ function countFish() {
 
 IFS=', ' read -r -a array < ${INPUT}
 for count in ${array[@]}; do
-  if [ -z "${FISH[${count}]}" ]; then
-    FISH[${count}]=0
-  fi
   (( FISH[${count}]++ ))
 done
 for (( i = 0; i < ${DAYS}; i++ )); do
