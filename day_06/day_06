@@ -3,8 +3,7 @@
 DAYS=${1-80}
 INPUT=${2-aoc.input}
 
-FISH=( 0 0 0 0 0 0 0 )
-NEW_FISH=( 0 0 0 0 0 0 0 0 0 )
+FISH=( 0 0 0 0 0 0 0 0 0 )
 
 function nextDay() {
   local idx
@@ -14,21 +13,13 @@ function nextDay() {
     (( prev_idx = idx - 1 ))
     FISH[${prev_idx}]=${FISH[${idx}]}
   done
-  (( new_fish += ${NEW_FISH[0]:-0} ))
-  for (( idx = 1; idx < ${#NEW_FISH[@]}; idx++ )); do
-    (( prev_idx = idx - 1 ))
-    NEW_FISH[${prev_idx}]=${NEW_FISH[${idx}]}
-  done
-  FISH[6]=${new_fish}
-  NEW_FISH[8]=${new_fish}
+  (( FISH[6] += ${new_fish} ))
+  FISH[8]=${new_fish}
 }
 
 function countFish() {
   local cnt
   for fish in ${FISH[@]}; do
-    (( cnt += fish ))
-  done
-  for fish in ${NEW_FISH[@]}; do
     (( cnt += fish ))
   done
   echo ${cnt}
