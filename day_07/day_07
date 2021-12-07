@@ -41,6 +41,28 @@ IFS=', ' read -r -a CRABS < ${INPUT}
 CRABS=( $( printf '%d\n' ${CRABS[@]} | sort -n ) )
 if [ ${EXPONENTIAL} -eq 0 ]; then
   echo $( calculateFuel $( getMedian ) )
+elif [ ${EXPONENTIAL} -eq 2 ]; then
+  left=${CRABS[0]}
+  right=${CRABS[$(( ${#CRABS[@]} - 1 ))]}
+  while :; do
+    (( middle = left + ( (right - left) / 2) ))
+    if [ $( calculateFuel ${left} ) -lt $( calculateFuel ${right} ) ]; then
+      right=${middle}
+    else
+      left=${middle}
+    fi
+
+    if [ $(( left + 1 )) -ge ${right} ]; then
+      fuel1=$( calculateFuel ${left} )
+      fuel2=$( calculateFuel ${right} )
+      if [ ${fuel1} -lt ${fuel2} ]; then
+        echo "${left}; ${fuel1}"
+      else
+        echo "${right}; ${fuel2}"
+     fi
+      break
+    fi
+  done
 else
   # Solution can be either floor(mean) or ceil(mean)
   # see: https://www.reddit.com/r/adventofcode/comments/rawxad/2021_day_7_part_2_i_wrote_a_paper_on_todays/
