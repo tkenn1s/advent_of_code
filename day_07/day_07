@@ -1,0 +1,55 @@
+#!/bin/bash
+
+EXPONENTIAL=${1-0}
+INPUT=${2-aoc.input}
+
+function getMean() {
+  local total=$( printf '%d\n' ${CRABS[@]} | paste -sd+ | bc -l )
+  (( total /= ${#CRABS[@]} ))
+  echo ${total}
+}
+
+function getMedian() {
+  if (( ${#CRABS[@]}$nel % 2 == 0 )); then
+    echo $(( (${CRABS[$(( ${#CRABS[@]} / 2 ))]} + ${CRABS[$(( (${#CRABS[@]} / 2) - 1 ))]}) / 2 ))
+  else
+    echo ${CRABS[$(( ${#CRABS[@]} / 2 ))]}
+  fi
+}
+
+function sumToN() {
+  echo $(( $1 * ($1 + 1) / 2 ))
+}
+
+function calculateFuel() {
+  local position=$1
+  local cnt=0
+  local crab
+  local fuel
+  for crab in ${CRABS[@]}; do
+    (( fuel = position - crab ))
+    if [ ${EXPONENTIAL} -eq 0 ]; then
+      (( cnt += ${fuel#-} ))
+    else
+      (( cnt += $( sumToN ${fuel#-} ) ))
+    fi
+  done
+  echo ${cnt}
+}
+
+IFS=', ' read -r -a CRABS < ${INPUT}
+CRABS=( $( printf '%d\n' ${CRABS[@]} | sort -n ) )
+if [ ${EXPONENTIAL} -eq 0 ]; then
+  echo $( calculateFuel $( getMedian ) )
+else
+  # Solution can be either floor(mean) or ceil(mean)
+  # see: https://www.reddit.com/r/adventofcode/comments/rawxad/2021_day_7_part_2_i_wrote_a_paper_on_todays/
+  mean=$( getMean )
+  fuel1=$( calculateFuel ${mean} )
+  fuel2=$( calculateFuel $(( mean + 1 )) )
+  if [ ${fuel1} -lt ${fuel2} ]; then
+    echo ${fuel1}
+  else
+    echo ${fuel2}
+  fi
+fi
