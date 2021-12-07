@@ -10,7 +10,7 @@ function getMean() {
 }
 
 function getMedian() {
-  if (( ${#CRABS[@]}$nel % 2 == 0 )); then
+  if (( ${#CRABS[@]} % 2 == 0 )); then
     echo $(( (${CRABS[$(( ${#CRABS[@]} / 2 ))]} + ${CRABS[$(( (${#CRABS[@]} / 2) - 1 ))]}) / 2 ))
   else
     echo ${CRABS[$(( ${#CRABS[@]} / 2 ))]}
