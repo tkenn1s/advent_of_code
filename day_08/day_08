@@ -1,0 +1,134 @@
+#!/bin/bash
+
+COUNT_SPECIAL=${1-0}
+INPUT=${2-aoc.input}
+declare -A SIGNAL
+
+SPIN=0
+function spin() {
+  local spinner="/-\|"
+  echo -en "\033[D"
+  printf "%s" "${spinner:${SPIN}:1}"
+  (( SPIN = (SPIN + 1) % ${#spinner} ))
+}
+
+function sortDigit() {
+  local digit=$1
+  echo ${digit} | grep -o . | sort | tr -d "\n"
+}
+
+function hasAllSegments() {
+  local super_set=$1
+  local sub_set=$2
+  local idx
+  local char
+  for (( idx = 0; idx < ${#sub_set}; idx++ )); do
+    char=${sub_set:${idx}:1}
+    if [[ "${super_set}" =~ .*"${char}".* ]]; then
+      continue
+    fi
+    return 0
+  done
+  return 1
+}
+
+function decodeSignal() {
+  SIGNAL=()
+  local signal
+  IFS=' ' read -r -a signal <<< $1
+  local digit
+  local fiveDigit=()
+  local sixDigit=()
+  local translate=()
+  for digit in ${signal[@]}; do
+    digit=$( sortDigit ${digit} )
+    case ${#digit} in
+      2)
+        SIGNAL[${digit}]=1
+        translate[1]=${digit}
+        ;;
+      3)
+        SIGNAL[${digit}]=7
+        translate[7]=${digit}
+        ;;
+      4)
+        SIGNAL[${digit}]=4
+        translate[4]=${digit}
+        ;;
+      5) 
+        fiveDigit+=( ${digit} ) ;;
+      6) 
+        sixDigit+=( ${digit} ) ;;
+      7)
+        SIGNAL[${digit}]=8
+        translate[8]=${digit}
+        ;;
+    esac
+  done
+  for key in ${!sixDigit[@]}; do
+    digit=${sixDigit[${key}]}
+    hasAllSegments ${digit} ${translate[1]}
+    if [ $? -eq 0 ]; then
+      SIGNAL[${digit}]=6
+      translate[6]=${digit}
+      continue
+    fi
+    hasAllSegments ${digit} ${translate[4]}
+    if [ $? -eq 1 ]; then
+      SIGNAL[${digit}]=9
+      translate[9]=${digit}
+      continue
+    fi
+    SIGNAL[${digit}]=0
+    translate[0]=${digit}
+  done
+  for key in ${!fiveDigit[@]}; do
+    digit=${fiveDigit[${key}]}
+    hasAllSegments ${digit} ${translate[1]}
+    if [ $? -eq 1 ]; then
+      SIGNAL[${digit}]=3
+      translate[3]=${digit}
+      continue
+    fi
+    hasAllSegments ${translate[9]} ${digit}
+    if [ $? -eq 1 ]; then
+      SIGNAL[${digit}]=5
+      translate[5]=${digit}
+      continue
+    fi
+    SIGNAL[${digit}]=2
+    translate[2]=${digit}
+  done
+}
+
+function generateNumber() {
+  local digit
+  local number=$@
+  local output
+  for digit in ${number}; do
+    digit=$( sortDigit ${digit} )
+    output=${output}${SIGNAL[${digit}]}
+  done
+  echo ${output}
+}
+
+sum=0
+while read line
+do
+  spin
+  if [ ${COUNT_SPECIAL} -eq 0 ]; then
+    for digit in ${line#*| }; do
+      if [ ${#digit} -eq 2 -o ${#digit} -eq 3 -o ${#digit} -eq 4 -o ${#digit} -eq 7 ]; then
+       (( sum++ ))
+      fi
+    done
+  else
+    signal=${line% |*}
+    decodeSignal "${line% |*}"
+    number=$( generateNumber ${line#*| } )
+    (( sum += 10#${number} ))
+  fi
+done < "${INPUT}"
+
+echo -e "\033[1D${sum}"
+
