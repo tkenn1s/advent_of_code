@@ -12,19 +12,18 @@ function spin() {
   (( SPIN = (SPIN + 1) % ${#spinner} ))
 }
 
-function sortDigit() {
-  local digit=$1
-  echo ${digit} | grep -o . | sort | tr -d "\n"
-}
-
-function hasAllSegments() {
-  local super_set=$1
-  local sub_set=$2
+function isMatch() {
+  local subset=$1
+  local digit1=$2
+  local digit2=$3
+  if [ ${subset} -eq 0 -a ${#digit1} -ne ${#digit2} ]; then
+    return 0
+  fi
   local idx
   local char
-  for (( idx = 0; idx < ${#sub_set}; idx++ )); do
-    char=${sub_set:${idx}:1}
-    if [[ "${super_set}" =~ .*"${char}".* ]]; then
+  for (( idx = 0; idx < ${#digit1}; idx++ )); do
+    char=${digit1:${idx}:1}
+    if [[ "${digit2}" =~ .*"${char}".* ]]; then
       continue
     fi
     return 0
@@ -41,7 +40,6 @@ function decodeSignal() {
   local sixDigit=()
   local translate=()
   for digit in ${signal[@]}; do
-    digit=$( sortDigit ${digit} )
     case ${#digit} in
       2)
         SIGNAL[${digit}]=1
@@ -67,13 +65,13 @@ function decodeSignal() {
   done
   for key in ${!sixDigit[@]}; do
     digit=${sixDigit[${key}]}
-    hasAllSegments ${digit} ${translate[1]}
+    isMatch 1 ${translate[1]} ${digit}
     if [ $? -eq 0 ]; then
       SIGNAL[${digit}]=6
       translate[6]=${digit}
       continue
     fi
-    hasAllSegments ${digit} ${translate[4]}
+    isMatch 1 ${translate[4]} ${digit}
     if [ $? -eq 1 ]; then
       SIGNAL[${digit}]=9
       translate[9]=${digit}
@@ -84,13 +82,13 @@ function decodeSignal() {
   done
   for key in ${!fiveDigit[@]}; do
     digit=${fiveDigit[${key}]}
-    hasAllSegments ${digit} ${translate[1]}
+    isMatch 1 ${translate[1]} ${digit}
     if [ $? -eq 1 ]; then
       SIGNAL[${digit}]=3
       translate[3]=${digit}
       continue
     fi
-    hasAllSegments ${translate[9]} ${digit}
+    isMatch 1 ${digit} ${translate[9]}
     if [ $? -eq 1 ]; then
       SIGNAL[${digit}]=5
       translate[5]=${digit}
@@ -101,13 +99,26 @@ function decodeSignal() {
   done
 }
 
+function getNumber() {
+  local digit=$1
+  local signal_digit
+  for signal_digit in ${!SIGNAL[@]}; do
+    isMatch 0 ${signal_digit} ${digit}
+    if [ $? -eq 1 ]; then
+      echo ${SIGNAL[${signal_digit}]}
+      return
+    fi
+  done
+  echo ""
+}
+
 function generateNumber() {
   local digit
-  local number=$@
+  local value=$@
   local output
-  for digit in ${number}; do
-    digit=$( sortDigit ${digit} )
-    output=${output}${SIGNAL[${digit}]}
+  local number
+  for digit in ${value}; do
+    output=${output}$( getNumber ${digit} )
   done
   echo ${output}
 }
