@@ -1,0 +1,105 @@
+#!/bin/bash
+
+FIND_SYNC=${1-0}
+INPUT=${2-aoc.input}
+
+declare -A GRID
+SPIN=0
+function spin() {
+  local spinner="/-\|"
+  echo -en "\033[D"
+  printf "%s" "${spinner:${SPIN}:1}"
+  (( SPIN = (SPIN + 1) % ${#spinner} ))
+}
+
+function bumpEnergy {
+  local x=$1
+  local y=$2
+  local i
+  local j
+  for (( j = $(( y - 1 )); j <= $(( y + 1 )); j++ )); do
+    if [ ${j} -lt 0 -o ${j} -ge ${HEIGHT} ]; then
+      continue
+    fi
+    for (( i = $(( x - 1 )); i <= $(( x + 1 )); i++ )); do
+      if [ ${i} -lt 0 -o ${i} -ge ${WIDTH} ]; then
+        continue
+      fi
+      if [ ${GRID[${i},${j}]} -eq 0 ]; then
+        continue
+      fi
+      (( GRID[${i},${j}] += 1 ))
+    done
+  done
+}
+
+function flash() {
+  local x
+  local y
+  local flashes=0
+  for (( y = 0; y < ${HEIGHT}; y++ )); do
+    for (( x = 0; x < ${WIDTH}; x++ )); do
+      if [ ${GRID[${x},${y}]} -gt 9 ]; then
+        (( flashes++ ))
+        GRID[${x},${y}]=0
+        bumpEnergy ${x} ${y}
+      fi
+    done
+  done
+  return ${flashes}
+}
+
+function step() {
+  local x
+  local y
+  local total_flashes=0
+  for (( y = 0; y < ${HEIGHT}; y++ )); do
+    for (( x = 0; x < ${WIDTH}; x++ )); do
+      (( GRID[${x},${y}] += 1 ))
+    done
+  done
+  while true; do
+    flash
+    local flashes=$?
+    (( total_flashes += flashes ))
+    if [ ${flashes} -eq 0 ]; then
+      return ${total_flashes}
+    fi
+  done
+  return ${total_flashes}
+}
+
+y=0
+while read line
+do
+  WIDTH=${#line}
+  for (( x = 0; x < ${#line}; x++ )); do
+    GRID[${x},${y}]=${line:${x}:1}
+  done
+  (( y++ ))
+done < "${INPUT}"
+HEIGHT=${y}
+
+total_flashes=0
+cnt=1
+while true; do
+  spin
+  step
+  step_flashes=$?
+  (( total_flashes += step_flashes ))
+  if [ ${FIND_SYNC} -eq 0 -a ${cnt} -eq 100 ]; then
+    break
+  fi
+  if [ ${step_flashes} -eq 100 ]; then
+    break
+  fi
+  (( cnt++ ))
+done
+
+echo -ne "\033[1D"
+if [ ${FIND_SYNC} -eq 0 ]; then
+  echo ${total_flashes}
+else
+  echo ${cnt}
+fi
+
