@@ -5,6 +5,8 @@ INPUT=${2-aoc.input}
 
 declare -A GRAPH
 declare -a AOC_PATH
+declare -A AOC_PATH_NODES
+declare -A AOC_MULTI_NODE
 PATH_COUNT=0
 SPIN=0
 function spin() {
@@ -14,87 +16,37 @@ function spin() {
   (( SPIN = (SPIN + 1) % ${#spinner} ))
 }
 
-function isMultiNode() {
-  local node=$1
-  if [ ${node} == ${node^^} ]; then
-    return 1
-  else
-    return 0
-  fi
-}
-
-function pathContainsNode() {
-  local node=$1
-  local path_node
-  for path_node in ${AOC_PATH[@]}; do
-    if [ ${path_node} == ${node} ]; then
-      return 1
-    fi
-  done
-  return 0
-}
-
-function isReenteredNode() {
-  local node=$1
-  isMultiNode ${node}
-  local is_multi=$?
-  if [ ${is_multi} -eq 1 ]; then
-    return 0
-  fi
-  pathContainsNode ${node}
-  local contains_node=$?
-  return ${contains_node}
-}
-
-function canEnterCave() {
-  local node=$1
-  if [ ${node} == "start" ]; then
-    return 0
-  fi
-  isMultiNode ${node}
-  local is_multi=$?
-  if [ ${is_multi} -eq 1 ]; then
-    return 1
-  fi
-  pathContainsNode ${node}
-  local contains_node=$?
-  if [ ${contains_node} -eq 1 ]; then
-     if [ ${ALLOW_REENTER} -eq 1 -a -z "${HAS_REENTERED}" ]; then
-       return 1
-     fi
-     return 0
-  fi
-  return 1
-}
-
 function findPath() {
   local first_node=$1
-  declare -a nodes
-  IFS=',' read -r -a nodes <<< ${GRAPH[${first_node}]} 
   local next_node
   local reentered=0
-    AOC_PATH+=( ${first_node} )
-  for next_node in ${nodes[@]}; do
+  AOC_PATH+=( ${first_node} )
+  (( AOC_PATH_NODES[${first_node}] += 1 ))
+  for next_node in ${GRAPH[${first_node}]}; do
     spin
     if [ ${next_node} == "end" ]; then
       (( PATH_COUNT += 1 ))
       continue
     fi
-    canEnterCave ${next_node}
-    if [ $? -eq 0 ]; then
+    if [ ${next_node} == "start" ]; then
       continue
     fi
-    isReenteredNode ${next_node}
-    if [ $? -eq 1 ]; then
+    if [ ${AOC_MULTI_NODE[${next_node}]-0} -eq 0 -a ${AOC_PATH_NODES[${next_node}]-0} -gt 0 ]; then
+      if [ ${ALLOW_REENTER} -eq 0 -o ! -z "${HAS_REENTERED}" ]; then
+        continue
+      fi
+    fi
+    if [ ${AOC_MULTI_NODE[${next_node}]-0} -eq 0 -a ${AOC_PATH_NODES[${next_node}]-0} -gt 0 ]; then
       reentered=1
       HAS_REENTERED=${next_node}
     fi
     findPath ${next_node}
     if [ ${reentered} -eq 1 ]; then
-      unset HAS_REENTERED
+      HAS_REENTERED=""
       reenetered=0
     fi
   done
+  (( AOC_PATH_NODES[${first_node}] -= 1 ))
   unset AOC_PATH[-1]
 }
 
@@ -102,12 +54,17 @@ while read line
 do
   start=${line%-*}
   end=${line#*-}
-  GRAPH[${start}]+=",${end}"
-  GRAPH[${end}]+=",${start}"
+  GRAPH[${start}]+="${end} "
+  GRAPH[${end}]+="${start} "
+  if [ ${start} == ${start^^} ]; then
+    AOC_MULTI_NODE[${start}]=1
+  fi
+  if [ ${end} == ${end^^} ]; then
+    AOC_MULTI_NODE[${end}]=1
+  fi
+  AOC_PATH_NODES[${start}]=0
+  AOC_PATH_NODES[${end}]=0
 done < "${INPUT}"
-for node in ${!GRAPH[@]}; do
-  GRAPH[${node}]=$( echo "${GRAPH[${node}]}" | cut -d, -f2- )
-done
 findPath start
 echo -ne "\033[1D"
 echo ${PATH_COUNT}
