@@ -1,0 +1,129 @@
+#!/bin/bash
+
+ALL_FOLDS=${1-0}
+INPUT=${2-aoc.input}
+
+declare -A GRID
+declare -a INSTRUCTION
+SPIN=0
+function spin() {
+  local spinner="/-\|"
+  echo -en "\033[D"
+  printf "%s" "${spinner:${SPIN}:1}"
+  (( SPIN = (SPIN + 1) % ${#spinner} ))
+}
+
+function dumpGrid() {
+  local x
+  local y
+  for (( y = 0; y <= ${MAX_Y}; y++ )); do
+    for (( x = 0; x <= ${MAX_X}; x++ )); do
+      printf "%s" ${GRID[${x},${y}]-"."}
+    done
+    printf "\n"
+  done
+}
+
+function countDots() {
+  local count=0
+  local x
+  local y
+  for (( y = 0; y <= ${MAX_Y}; y++ )); do
+    for (( x = 0; x <= ${MAX_X}; x++ )); do
+      if [ ! -z "${GRID[${x},${y}]}" ]; then
+        (( count++ ))
+      fi
+    done
+  done
+  echo ${count}
+}
+
+function foldPaper() {
+  local direction=$1
+  local axis=${direction%=*}
+  local position=${direction#*=}
+  local x
+  local y
+  local offset
+  if [ ${axis} == "y" ]; then
+    local new_y
+    for (( offset = 1; offset <= $(( ${MAX_Y} - ${position} )); offset++ )); do
+      spin
+      (( y = position + offset ))
+      (( new_y = position - offset ))
+      for (( x = 0; x <= ${MAX_X}; x++ )); do
+        if [ -z "${GRID[${x},${y}]}" ]; then
+          continue
+        fi
+        GRID[${x},${new_y}]=${GRID[${x},${y}]}
+      done
+    done
+    (( MAX_Y = position - 1 ))
+  else
+    local new_x
+    for (( y = 0; y <= ${MAX_Y}; y++ )); do
+      spin
+      for (( offset = 1; offset <= $(( ${MAX_X} - ${position} )); offset++ )); do
+      (( x = position + offset ))
+      (( new_x = position - offset ))
+        if [ -z "${GRID[${x},${y}]}" ]; then
+          continue
+        fi
+        GRID[${new_x},${y}]=${GRID[${x},${y}]}
+      done
+    done
+    (( MAX_X = position - 1 ))
+  fi
+}
+
+function readGridLine() {
+  local line=$1
+  local x=${line%,*}
+  if [ ${MAX_X} -lt ${x} ]; then
+    MAX_X=${x}
+  fi
+  local y=${line#*,}
+  if [ ${MAX_Y} -lt ${y} ]; then
+    MAX_Y=${y}
+  fi
+  GRID[${line}]="#"
+}
+
+function readInstruction() {
+  local line=$1
+  INSTRUCTION+=( ${line:11} )
+}
+
+MAX_X=0
+MAX_Y=0
+read_instructions=0
+declare -a FOLD
+while read line
+do
+  if [ -z "${line}" ]; then
+    read_instructions=1
+    continue
+  fi
+  if [ ${read_instructions} -eq 0 ]; then
+    readGridLine "${line}"
+  else
+    readInstruction "${line}"
+  fi
+done < "${INPUT}"
+
+for (( idx = 0; idx < ${#INSTRUCTION[@]}; idx++ )); do
+  spin
+  foldPaper ${INSTRUCTION[${idx}]}
+  if [ ${ALL_FOLDS} -eq 0 ]; then
+    break
+  fi
+done
+
+echo -ne "\033[1D"
+
+if [ ${ALL_FOLDS} -eq 0 ]; then
+  countDots
+else
+  dumpGrid
+fi
+
